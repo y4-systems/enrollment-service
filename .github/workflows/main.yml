@@ -59,5 +59,4 @@ jobs:
         with:
           context: .
           push: true
-          # Change "yourdockerhubusername" to your actual Docker Hub username!
-          tags: yourdockerhubusername/enrollment-service:latest
+          tags: nuwanifonseka/enrollment-service:latest
