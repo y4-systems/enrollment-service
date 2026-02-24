@@ -1,0 +1,78 @@
+openapi: 3.0.0
+info:
+  title: Enrollment Service API
+  description: Microservice to manage student enrollments in courses.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5003/api
+    description: Local server
+paths:
+  /enroll:
+    post:
+      summary: Enroll a student in a course
+      description: Validates student and course, creates an enrollment, and interacts with Grade Service.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - student_id
+                - course_id
+              properties:
+                student_id:
+                  type: string
+                  example: "60d0fe4f5311236168a109ca"
+                course_id:
+                  type: string
+                  example: "60f1b2b3b3b3b3b3b3b3b3b3"
+      responses:
+        '201':
+          description: Enrollment created successfully
+        '400':
+          description: Invalid parameters
+        '404':
+          description: Student or Course not found (From external services)
+        '409':
+          description: Student already enrolled in this course
+        '500':
+          description: Internal server error
+  /enrollments/{studentId}:
+    get:
+      summary: Get student enrollments
+      description: Returns all enrollments for a specific student.
+      parameters:
+        - in: path
+          name: studentId
+          required: true
+          schema:
+            type: string
+          description: The ID of the student
+      responses:
+        '200':
+          description: A list of enrollments
+        '404':
+          description: No enrollments found for this student
+        '500':
+          description: Internal server error
+  /enroll/{id}:
+    delete:
+      summary: Cancel an enrollment
+      description: Sets the status of an enrollment to CANCELLED.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The ID of the enrollment record
+      responses:
+        '200':
+          description: Enrollment cancelled successfully
+        '400':
+          description: Enrollment is already cancelled
+        '404':
+          description: Enrollment not found
+        '500':
+          description: Internal server error
