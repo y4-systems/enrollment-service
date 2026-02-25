@@ -113,7 +113,7 @@ jobs:
           service: enrollment-service
           region: us-central1
           image: docker.io/nuwanifonseka/${{ env.IMAGE_NAME }}:latest
-          flags: --allow-unauthenticated --port=5003
+          flags: --allow-unauthenticated
           env_vars: |
             MONGO_URI=${{ secrets.MONGO_URI }}
             STUDENT_SERVICE_URL=${{ secrets.STUDENT_SERVICE_URL }}
