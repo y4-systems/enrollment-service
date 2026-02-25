@@ -80,7 +80,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
+          images: nuwanifonseka/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-
@@ -91,7 +91,7 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=registry,ref=nuwanifonseka/${{ env.IMAGE_NAME }}:latest
           cache-to: type=inline
 
   # ── Job 4: Deploy to Google Cloud Run ──────────────────────────
@@ -112,7 +112,7 @@ jobs:
         with:
           service: enrollment-service
           region: us-central1
-          image: docker.io/${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          image: docker.io/nuwanifonseka/${{ env.IMAGE_NAME }}:latest
           flags: --allow-unauthenticated --port=5003
           env_vars: |
             MONGO_URI=${{ secrets.MONGO_URI }}
@@ -123,4 +123,4 @@ jobs:
       - name: Summary
         run: |
           echo "✅ Deployment triggered for enrollment-service"
-          echo "🐳 Image: ${{ secrets.DOCKER_USERNAME }}/enrollment-service:latest"
+          echo "🐳 Image: nuwanifonseka/enrollment-service:latest"
