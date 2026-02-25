@@ -40,7 +40,7 @@ const swaggerOptions = {
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerOptions));
 
 // Routes
-app.use("/api", enrollmentRoutes);
+app.use("/", enrollmentRoutes);
 
 // Health Check
 app.get("/", (req, res) => {
