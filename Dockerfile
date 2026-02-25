@@ -22,8 +22,6 @@ COPY package.json ./
 RUN chown -R appuser:appgroup /app
 USER appuser
 
-# Cloud Run injects PORT env var
-# Default is 8080, but app handles fallback to 5003
-ENV PORT=8080
+EXPOSE 8080
 
 CMD ["node", "src/server.js"]

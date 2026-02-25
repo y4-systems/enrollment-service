@@ -5,8 +5,10 @@ info:
   version: 1.0.0
 
 servers:
+  - url: https://enrollment-service-763150334229.us-central1.run.app/api
+    description: Production server (Google Cloud Run)
   - url: http://localhost:5003/api
-    description: Local server
+    description: Local development server
 
 components:
   securitySchemes:

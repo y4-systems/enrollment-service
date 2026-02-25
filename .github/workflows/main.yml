@@ -32,7 +32,7 @@ jobs:
       - name: Run Tests
         run: npm test
         env:
-          PORT: 5003
+          PORT: 8080
           MONGO_URI: mongodb://localhost/test
           STUDENT_SERVICE_URL: http://localhost:5001
           COURSE_SERVICE_URL: http://localhost:5002
