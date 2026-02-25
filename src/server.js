@@ -31,8 +31,13 @@ const path = require("path");
 // Load Swagger document
 const swaggerDocument = YAML.load(path.join(__dirname, "swagger.yaml"));
 
-// Swagger Documentation Route
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// Swagger Documentation Options
+const swaggerOptions = {
+  customCss: '.swagger-ui { background-color: white; }',
+  customSiteTitle: "Enrollment Service API Docs"
+};
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerOptions));
 
 // Routes
 app.use("/api", enrollmentRoutes);
