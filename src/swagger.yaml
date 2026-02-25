@@ -1,16 +1,28 @@
 openapi: 3.0.0
 info:
   title: Enrollment Service API
-  description: Microservice to manage student enrollments in courses.
+  description: Microservice to manage student enrollments in courses. Part of the University Student Management System.
   version: 1.0.0
+
 servers:
   - url: http://localhost:5003/api
     description: Local server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from the Student & Auth Service (POST /auth/login)
+
 paths:
   /enroll:
     post:
       summary: Enroll a student in a course
-      description: Validates student and course, creates an enrollment, and interacts with Grade Service.
+      description: Validates student and course via external services, creates an enrollment, and triggers Grade Service to create a grade record.
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -23,25 +35,26 @@ paths:
               properties:
                 student_id:
                   type: string
-                  example: "60d0fe4f5311236168a109ca"
+                  example: "S1001"
                 course_id:
                   type: string
-                  example: "60f1b2b3b3b3b3b3b3b3b3b3"
+                  example: "C2002"
       responses:
         '201':
           description: Enrollment created successfully
         '400':
-          description: Invalid parameters
-        '404':
-          description: Student or Course not found (From external services)
+          description: Invalid parameters (missing student_id or course_id)
+        '401':
+          description: Unauthorized — no token or invalid token
         '409':
           description: Student already enrolled in this course
         '500':
           description: Internal server error
+
   /enrollments/{studentId}:
     get:
       summary: Get student enrollments
-      description: Returns all enrollments for a specific student.
+      description: Returns all enrollments for a specific student. This is a public read-only endpoint.
       parameters:
         - in: path
           name: studentId
@@ -56,10 +69,13 @@ paths:
           description: No enrollments found for this student
         '500':
           description: Internal server error
+
   /enroll/{id}:
     delete:
       summary: Cancel an enrollment
       description: Sets the status of an enrollment to CANCELLED.
+      security:
+        - BearerAuth: []
       parameters:
         - in: path
           name: id
@@ -72,6 +88,8 @@ paths:
           description: Enrollment cancelled successfully
         '400':
           description: Enrollment is already cancelled
+        '401':
+          description: Unauthorized — no token or invalid token
         '404':
           description: Enrollment not found
         '500':

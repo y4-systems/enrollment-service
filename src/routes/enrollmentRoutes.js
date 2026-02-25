@@ -5,9 +5,13 @@ const {
     getEnrollmentsByStudent,
     cancelEnrollment,
 } = require("../controllers/enrollmentController");
+const { authenticate } = require("../middleware/auth");
 
-router.post("/enroll", createEnrollment);
+// Protected routes — JWT validated via Auth Service
+router.post("/enroll", authenticate, createEnrollment);
+router.delete("/enroll/:id", authenticate, cancelEnrollment);
+
+// Public route — read-only
 router.get("/enrollments/:studentId", getEnrollmentsByStudent);
-router.delete("/enroll/:id", cancelEnrollment);
 
 module.exports = router;

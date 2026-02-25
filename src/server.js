@@ -46,27 +46,31 @@ app.get("/", (req, res) => {
   });
 });
 
-// Validate Environment Variables
-if (!process.env.PORT) {
-  console.error("PORT not defined in environment");
-  process.exit(1);
-}
-
-if (!process.env.MONGO_URI) {
-  console.error("MONGO_URI not defined in environment");
-  process.exit(1);
-}
-
 // Database Connection
-mongoose
-  .connect(process.env.MONGO_URI, { dbName: 'enrollmentdb' })
-  .then(() => {
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, { dbName: 'enrollmentdb' });
     console.log("MongoDB Connected");
-    app.listen(process.env.PORT, () => {
-      console.log(`Enrollment Service running on port ${process.env.PORT}`);
-    });
-  })
-  .catch((err) => {
+  } catch (err) {
     console.error("MongoDB connection failed:", err.message);
     process.exit(1);
+  }
+};
+
+// Start server only when run directly (not during tests)
+if (require.main === module) {
+  if (!process.env.MONGO_URI) {
+    console.error("MONGO_URI not defined in environment");
+    process.exit(1);
+  }
+
+  connectDB().then(() => {
+    const PORT = process.env.PORT || 5003;
+    app.listen(PORT, () => {
+      console.log(`Enrollment Service running on port ${PORT}`);
+    });
   });
+}
+
+const Enrollment = require("./models/Enrollment");
+module.exports = { app, Enrollment };

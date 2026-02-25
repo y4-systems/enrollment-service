@@ -1,19 +1,28 @@
+# ── Build stage ───────────────────────────────────────────────────
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+# ── Final stage ───────────────────────────────────────────────────
 FROM node:18-alpine
 
-# Create app directory
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-COPY package*.json ./
+# Non-root user for security (principle of least privilege)
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-RUN npm install --production
+# Copy production deps and source
+COPY --from=builder /app/node_modules ./node_modules
+COPY src/ ./src/
+COPY package.json ./
 
-# Bundle app source
-COPY . .
+RUN chown -R appuser:appgroup /app
+USER appuser
 
-# Ensure standard port
+# Cloud Run injects PORT env var — must listen on it
 EXPOSE 5003
 
-# Command to run the application
-CMD [ "npm", "start" ]
+CMD ["node", "src/server.js"]
