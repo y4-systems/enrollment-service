@@ -8,7 +8,7 @@ on:
 
 env:
   IMAGE_NAME: enrollment-service
-  NODE_VERSION: "18"
+  NODE_VERSION: "20"
 
 jobs:
   # ── Job 1: Test ────────────────────────────────────────────────
