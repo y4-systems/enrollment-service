@@ -59,7 +59,7 @@ if (!process.env.MONGO_URI) {
 
 // Database Connection
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, { dbName: 'enrollmentdb' })
   .then(() => {
     console.log("MongoDB Connected");
     app.listen(process.env.PORT, () => {
