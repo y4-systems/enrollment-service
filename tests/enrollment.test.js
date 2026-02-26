@@ -64,7 +64,7 @@ describe('Authentication Middleware', () => {
 
     it('allows GET /enrollments without token (public)', async () => {
         Enrollment.find = jest.fn().mockResolvedValue([]);
-        const res = await request(app).get('/enrollments/S001');
+        const res = await request(app).get('/enrollments/student/S001');
         // Should not be 401 — even though no enrollments, it should be 404 (not unauthorized)
         expect(res.status).not.toBe(401);
     });
@@ -145,11 +145,11 @@ describe('POST /enroll', () => {
     });
 });
 
-// ── GET /enrollments/:studentId ───────────────────────────────
-describe('GET /enrollments/:studentId', () => {
+// ── GET /enrollments/student/:studentId ───────────────────────────────
+describe('GET /enrollments/student/:studentId', () => {
     it('returns 404 when no enrollments found', async () => {
         Enrollment.find = jest.fn().mockResolvedValue([]);
-        const res = await request(app).get('/enrollments/S999');
+        const res = await request(app).get('/enrollments/student/S999');
         expect(res.status).toBe(404);
         expect(res.body.message).toMatch(/no enrollments found/i);
     });
@@ -161,7 +161,7 @@ describe('GET /enrollments/:studentId', () => {
         ];
         Enrollment.find = jest.fn().mockResolvedValue(mockEnrollments);
 
-        const res = await request(app).get('/enrollments/S001');
+        const res = await request(app).get('/enrollments/student/S001');
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
         expect(res.body.length).toBe(2);
@@ -169,9 +169,59 @@ describe('GET /enrollments/:studentId', () => {
 
     it('returns 500 on database error', async () => {
         Enrollment.find = jest.fn().mockRejectedValue(new Error('DB error'));
-        const res = await request(app).get('/enrollments/S001');
+        const res = await request(app).get('/enrollments/student/S001');
         expect(res.status).toBe(500);
         expect(res.body.message).toMatch(/error fetching/i);
+    });
+});
+
+// ── GET /enrollments/course/:courseId ───────────────────────────────
+describe('GET /enrollments/course/:courseId', () => {
+    it('returns roster when found', async () => {
+        Enrollment.find = jest.fn().mockResolvedValue([{ student_id: 'S001' }]);
+        const res = await request(app).get('/enrollments/course/C202');
+        expect(res.status).toBe(200);
+        expect(res.body[0].student_id).toBe('S001');
+    });
+});
+
+// ── GET /enrollments/check ──────────────────────────────────────────
+describe('GET /enrollments/check', () => {
+    it('returns isEnrolled: true for valid enrollment', async () => {
+        Enrollment.findOne = jest.fn().mockResolvedValue({ status: 'ACTIVE' });
+        const res = await request(app).get('/enrollments/check?studentId=S101&courseId=C202');
+        expect(res.status).toBe(200);
+        expect(res.body.isEnrolled).toBe(true);
+    });
+
+    it('returns isEnrolled: false for missing enrollment', async () => {
+        Enrollment.findOne = jest.fn().mockResolvedValue(null);
+        const res = await request(app).get('/enrollments/check?studentId=S999&courseId=C999');
+        expect(res.status).toBe(200);
+        expect(res.body.isEnrolled).toBe(false);
+    });
+});
+
+// ── PATCH /enrollments/:id/status ──────────────────────────────────
+describe('PATCH /enrollments/:id/status', () => {
+    const authHeader = { Authorization: 'Bearer fake-jwt-token-for-testing' };
+
+    it('updates status successfully', async () => {
+        Enrollment.findByIdAndUpdate = jest.fn().mockResolvedValue({ status: 'COMPLETED' });
+        const res = await request(app)
+            .patch('/enrollments/507f1f77bcf86cd799439011/status')
+            .set(authHeader)
+            .send({ status: 'COMPLETED' });
+        expect(res.status).toBe(200);
+        expect(res.body.enrollment.status).toBe('COMPLETED');
+    });
+
+    it('returns 400 for invalid status', async () => {
+        const res = await request(app)
+            .patch('/enrollments/507f1f77bcf86cd799439011/status')
+            .set(authHeader)
+            .send({ status: 'INVALID' });
+        expect(res.status).toBe(400);
     });
 });
 
