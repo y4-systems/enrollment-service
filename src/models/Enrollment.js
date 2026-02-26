@@ -12,7 +12,7 @@ const enrollmentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["ACTIVE", "CANCELLED"],
+      enum: ["ACTIVE", "CANCELLED", "WITHDRAWN", "COMPLETED"],
       default: "ACTIVE",
     },
     enrolled_at: {

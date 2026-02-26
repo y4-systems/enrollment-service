@@ -7,7 +7,7 @@ info:
 servers:
   - url: https://enrollment-service-763150334229.us-central1.run.app
     description: Production server (Google Cloud Run)
-  - url: http://localhost:5003
+  - url: http://localhost:8080
     description: Local development server
 
 components:
@@ -53,7 +53,7 @@ paths:
         '500':
           description: Internal server error
 
-  /enrollments/{studentId}:
+  /enrollments/student/{studentId}:
     get:
       summary: Get student enrollments
       description: Returns all enrollments for a specific student. This is a public read-only endpoint.
@@ -69,6 +69,87 @@ paths:
           description: A list of enrollments
         '404':
           description: No enrollments found for this student
+        '500':
+          description: Internal server error
+
+  /enrollments/course/{courseId}:
+    get:
+      summary: Get course roster
+      description: Returns all students enrolled in a specific course.
+      parameters:
+        - in: path
+          name: courseId
+          required: true
+          schema:
+            type: string
+          description: The ID of the course
+      responses:
+        '200':
+          description: A list of enrollments (roster)
+        '404':
+          description: No enrollments found for this course
+        '500':
+          description: Internal server error
+
+  /enrollments/check:
+    get:
+      summary: Validate student enrollment
+      description: Internal endpoint used by other services (like Grade Service) to verify if a student is enrolled in a course.
+      parameters:
+        - in: query
+          name: studentId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: courseId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Enrollment status returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isEnrolled:
+                    type: boolean
+                  status:
+                    type: string
+                  enrollment_id:
+                    type: string
+
+  /enrollments/{id}/status:
+    patch:
+      summary: Update enrollment status
+      description: Update the status of an enrollment (e.g., to WITHDRAWN or COMPLETED).
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [ACTIVE, CANCELLED, WITHDRAWN, COMPLETED]
+      responses:
+        '200':
+          description: Status updated successfully
+        '400':
+          description: Invalid status or missing ID
+        '404':
+          description: Enrollment not found
         '500':
           description: Internal server error
 

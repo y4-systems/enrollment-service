@@ -129,3 +129,97 @@ exports.cancelEnrollment = async (req, res) => {
         });
     }
 };
+
+exports.getEnrollmentsByCourse = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+
+        const enrollments = await Enrollment.find({ course_id: courseId });
+
+        if (!enrollments || enrollments.length === 0) {
+            return res.status(404).json({
+                message: "No enrollments found for this course",
+            });
+        }
+
+        res.status(200).json(enrollments);
+    } catch (error) {
+        res.status(500).json({
+            message: "Error fetching course roster",
+            error: error.message,
+        });
+    }
+};
+
+exports.checkEnrollment = async (req, res) => {
+    try {
+        const { studentId, courseId } = req.query;
+
+        if (!studentId || !courseId) {
+            return res.status(400).json({
+                message: "studentId and courseId are required as query parameters",
+            });
+        }
+
+        const enrollment = await Enrollment.findOne({
+            student_id: studentId,
+            course_id: courseId
+        });
+
+        if (!enrollment) {
+            return res.status(200).json({
+                isEnrolled: false,
+                status: null
+            });
+        }
+
+        res.status(200).json({
+            isEnrolled: true,
+            status: enrollment.status,
+            enrollment_id: enrollment._id
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error checking enrollment validation",
+            error: error.message,
+        });
+    }
+};
+
+exports.updateEnrollmentStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const validStatuses = ["ACTIVE", "CANCELLED", "WITHDRAWN", "COMPLETED"];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({
+                message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+            });
+        }
+
+        const enrollment = await Enrollment.findByIdAndUpdate(
+            id,
+            { status },
+            { new: true, runValidators: true }
+        );
+
+        if (!enrollment) {
+            return res.status(404).json({
+                message: "Enrollment not found",
+            });
+        }
+
+        res.status(200).json({
+            message: `Enrollment status updated to ${status} successfully`,
+            enrollment,
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error updating enrollment status",
+            error: error.message,
+        });
+    }
+};
