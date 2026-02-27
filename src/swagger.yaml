@@ -53,6 +53,20 @@ paths:
         '500':
           description: Internal server error
 
+  /enrollments:
+    get:
+      summary: Get all enrollments
+      description: Returns a list of all enrollment records in the system, limited to the 100 most recent records.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: A list of all enrollments
+        '404':
+          description: No enrollments found in the system
+        '500':
+          description: Internal server error
+
   /enrollments/student/{studentId}:
     get:
       summary: Get student enrollments
