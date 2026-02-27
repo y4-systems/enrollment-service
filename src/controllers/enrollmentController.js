@@ -223,3 +223,23 @@ exports.updateEnrollmentStatus = async (req, res) => {
         });
     }
 };
+
+exports.getAllEnrollments = async (req, res) => {
+    try {
+        // Fetch all enrollments, sorted by newest first
+        const enrollments = await Enrollment.find().sort({ enrolled_at: -1 }).limit(100);
+
+        if (!enrollments || enrollments.length === 0) {
+            return res.status(404).json({
+                message: "No enrollments found in the system",
+            });
+        }
+
+        res.status(200).json(enrollments);
+    } catch (error) {
+        res.status(500).json({
+            message: "Error fetching all enrollments",
+            error: error.message,
+        });
+    }
+};

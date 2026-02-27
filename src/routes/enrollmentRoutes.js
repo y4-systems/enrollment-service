@@ -7,10 +7,12 @@ const {
     getEnrollmentsByCourse,
     checkEnrollment,
     updateEnrollmentStatus,
+    getAllEnrollments,
 } = require("../controllers/enrollmentController");
 const { authenticate } = require("../middleware/auth");
 
 // Protected routes — JWT validated via Auth Service
+router.get("/enrollments", authenticate, getAllEnrollments);
 router.post("/enroll", authenticate, createEnrollment);
 router.delete("/enroll/:id", authenticate, cancelEnrollment);
 router.patch("/enrollments/:id/status", authenticate, updateEnrollmentStatus);
