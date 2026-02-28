@@ -1,123 +1,114 @@
-# 📝 Enrollment Service
+# Enrollment Service
 
-Microservice for managing student enrollments in courses. Part of the **University Student Management System** — SE4010 Cloud Computing Assignment.
+Enrollment Service is the course enrollment microservice in the University Student Management System (SE4010 Cloud Computing Assignment).
 
-> 🔥 **This is the integration service.** It communicates with Student, Course, and Grade services to validate data and trigger downstream actions.
+## Service Purpose
+- Enroll students into courses.
+- Track enrollment records and status.
+- Provide enrollment lookup endpoints for other services.
+- Integrate with Student Service and Course Service for validation.
+- Integrate with Grade Service to initialize grade records (when Grade Service is available).
 
-## 🛠 Tech Stack
+## API Endpoints
+Base URL (Cloud Run): `https://enrollment-service-763150334229.us-central1.run.app`
 
-- Node.js 18 + Express
-- MongoDB Atlas (via Mongoose)
-- Docker + Docker Hub
-- GitHub Actions CI/CD
-- Google Cloud Run (cloud deployment)
+- `POST /enroll` - Enroll a student in a course
+- `GET /enrollments` - Get all enrollments
+- `GET /enrollments/student/{studentId}` - Get enrollments by student
+- `GET /enrollments/course/{courseId}` - Get course roster
+- `GET /enrollments/check` - Check enrollment status
+- `PATCH /enrollments/{id}/status` - Update enrollment status
+- `DELETE /enroll/{id}` - Cancel enrollment
+- `GET /api-docs` - Swagger/OpenAPI UI
 
-## 🚀 Run Locally
+## Environment Variables
+Required runtime variables:
 
-```bash
-# 1. Install dependencies
-npm install
+- `MONGO_URI` - MongoDB connection string (in Cloud Run, configured via Secret Manager)
+- `STUDENT_SERVICE_URL` - Base URL of Student Service
+- `COURSE_SERVICE_URL` - Base URL of Course Service
+- `GRADE_SERVICE_URL` - Base URL of Grade Service
+- `PORT` - Service port (Cloud Run uses `8080`)
 
-# 2. Set up environment
-cp .env.example .env
-# Fill in MONGO_URI (from MongoDB Atlas) and service URLs
-
-# 3. Start dev server
-npm run dev
-
-# Visit: http://localhost:5003/
-# Swagger Docs: http://localhost:5003/api-docs
+### Local `.env` example
+```env
+PORT=5003
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>/enrollmentdb
+STUDENT_SERVICE_URL=https://student-service-<id>.us-central1.run.app
+COURSE_SERVICE_URL=https://course-service-<id>.us-central1.run.app
+GRADE_SERVICE_URL=https://grade-service-<id>.us-central1.run.app
 ```
 
-## 🐳 Run with Docker
+## Run Locally
+```bash
+npm install
+cp .env.example .env
+# update .env values
+npm run dev
+```
 
+Local docs:
+- `http://localhost:5003/api-docs`
+
+## Docker
+Build and run:
 ```bash
 docker build -t enrollment-service .
 docker run -p 5003:5003 --env-file .env enrollment-service
 ```
 
-## 🧪 Run Tests
+Container image repository:
+- `docker.io/nuwanifonseka/enrollment-service`
 
-```bash
-npm test
-```
+## CI/CD and Deployment Notes
+GitHub Actions workflow file:
+- `.github/workflows/main.yml`
 
-## 📡 API Endpoints
+Pipeline stages:
+1. Test
+2. Snyk Security Scan (fails on high/critical)
+3. Build and Push Docker image to Docker Hub
+4. Deploy to Google Cloud Run
 
-| Method   | Endpoint                      | Auth | Description                        |
-|----------|-------------------------------|------|------------------------------------|
-| `GET`    | `/`                           | None | Health check                       |
-| `POST`   | `/api/enroll`                | None | Enroll student in a course         |
-| `GET`    | `/api/enrollments/:studentId` | None | Get all enrollments for a student  |
-| `DELETE` | `/api/enroll/:id`            | None | Cancel an enrollment               |
-| `GET`    | `/api-docs`                  | None | Swagger API documentation          |
+Cloud deployment:
+- Platform: Google Cloud Run (`us-central1`)
+- Service: `enrollment-service`
+- Image: `docker.io/nuwanifonseka/enrollment-service:latest`
+- Secret mapping in deploy step: `MONGO_URI=MONGO_URI:latest`
 
-### Enroll endpoint — used by clients
+## Security Notes (Secret Manager + Snyk + JWT)
+- `MONGO_URI` is not deployed as plain text; it is mapped from Google Secret Manager.
+- CI includes Snyk security scanning before build/deploy.
+- API Gateway and service endpoints support JWT-based protected routes for authorized operations.
+- Input validation and duplicate enrollment checks are enforced in business logic.
 
-```
-POST /api/enroll
-{ "student_id": "S1001", "course_id": "C2002" }
-```
+## Inter-Service Communication Flow
+Enrollment Service communicates with other microservices:
 
-### Cancel endpoint — sets status to CANCELLED
+- Student Service:
+  - Validate student identity/existence before enrollment.
+- Course Service:
+  - Validate course and capacity before enrollment.
+- Grade Service:
+  - Create/initialize grade record after successful enrollment.
 
-```
-DELETE /api/enroll/:id
-```
+Typical `POST /enroll` flow:
+1. Receive enrollment request (`student_id`, `course_id`).
+2. Call Student Service validation endpoint.
+3. Call Course Service validation/capacity endpoint.
+4. Save enrollment record in Enrollment DB.
+5. Call Grade Service to create initial grade record (if configured/available).
 
-## 🔗 Inter-Service Communication
+## Repository Artifacts Checklist
+This repository includes:
+- Source code (`src/`)
+- Tests (`tests/`)
+- Dockerfile
+- CI/CD workflow (`.github/workflows/main.yml`)
+- OpenAPI/Swagger docs (`/api-docs`)
+- README (this file)
 
-| Service          | Purpose                     | Endpoint Called         |
-|------------------|-----------------------------|-------------------------|
-| Student Service  | Validate student exists     | `GET /students/:id`     |
-| Course Service   | Validate course exists      | `GET /courses/:id`      |
-| Grade Service    | Create initial grade record | `POST /grades`          |
-
-> If any external service is unreachable, the service gracefully falls back to mock data and logs a warning — ensuring fault tolerance during development and production.
-
-## 🔐 Security Features
-
-- **Helmet** — Secure HTTP headers
-- **CORS** — Cross-origin resource sharing
-- **Rate Limiting** — 100 requests per 15 minutes per IP
-- **Snyk SAST** — Automated vulnerability scanning in CI/CD
-- **Input Validation** — Required fields checked before processing
-- **Duplicate Prevention** — Prevents duplicate active enrollments
-
-## 🔑 GitHub Secrets Required
-
-| Secret             | Where to get it                                        |
-|--------------------|--------------------------------------------------------|
-| `SNYK_TOKEN`       | snyk.io → free account → API Token                    |
-| `DOCKER_USERNAME`  | Your Docker Hub username                               |
-| `DOCKER_PASSWORD`  | Docker Hub → Account Settings → Security → New Token   |
-| `GCP_SA_KEY`       | GCP → IAM → Service Accounts → Create Key (JSON)      |
-| `MONGO_URI`        | MongoDB Atlas → Connect → Drivers                      |
-
-## ☁️ Setup Guide
-
-### 1. MongoDB Atlas (Free)
-
-- Go to [mongodb.com/atlas](https://mongodb.com/atlas) → sign up free
-- Create a free M0 cluster
-- Go to **Database Access** → Add a user with password
-- Go to **Network Access** → Add IP `0.0.0.0/0` (allow all — fine for assignment)
-- Go to **Connect** → **Drivers** → copy the connection string
-- Replace `<password>` with your user's password and add `/enrollmentdb` before the `?` → save as `MONGO_URI` secret
-
-### 2. Docker Hub
-
-- Sign up at [hub.docker.com](https://hub.docker.com)
-- Go to **Account Settings** → **Security** → **New Access Token**
-- Add as `DOCKER_PASSWORD` secret in GitHub
-
-### 3. Google Cloud Run (Free Tier)
-
-- Go to [console.cloud.google.com](https://console.cloud.google.com) → create a project
-- Enable **Cloud Run API** and **IAM API**
-- Go to **IAM** → **Service Accounts** → Create Service Account
-- Grant roles: **Cloud Run Admin** + **Service Account User**
-- Click the account → **Keys** → **Add Key** → **JSON** → download
-- Copy the entire JSON content → paste as `GCP_SA_KEY` secret in GitHub
-
-**That's it — the pipeline deploys automatically on every push to `main`!**
+## Notes for Viva Demonstration
+- Show one live inter-service call from Enrollment to Student or Course Service.
+- Show GitHub Actions run where Snyk scan, build, and deploy all pass.
+- Show Cloud Run env where `MONGO_URI` is configured as Secret Manager reference.
