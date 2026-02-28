@@ -1,5 +1,21 @@
 const axios = require("axios");
 
+const allowMocks = process.env.ALLOW_MOCK_SERVICES === "true";
+
+const handleServiceFailure = (serviceName, error, mockData) => {
+  if (allowMocks) {
+    console.warn(
+      `[MOCK] ${serviceName} unreachable. Returning mock response because ALLOW_MOCK_SERVICES=true.`
+    );
+    return mockData;
+  }
+
+  const err = new Error(`${serviceName} is unreachable`);
+  err.status = 503;
+  err.details = error.message;
+  throw err;
+};
+
 const validateStudent = async (student_id) => {
   try {
     const response = await axios.get(
@@ -7,8 +23,11 @@ const validateStudent = async (student_id) => {
     );
     return response.data;
   } catch (error) {
-    console.warn(`[MOCK] Student service unreachable. Mocking success for ${student_id}`);
-    return { student_id, name: "Mock Student", status: "Valid" };
+    return handleServiceFailure("Student service", error, {
+      student_id,
+      name: "Mock Student",
+      status: "Valid",
+    });
   }
 };
 
@@ -19,8 +38,11 @@ const validateCourse = async (course_id) => {
     );
     return response.data;
   } catch (error) {
-    console.warn(`[MOCK] Course service unreachable. Mocking success for ${course_id}`);
-    return { course_id, name: "Mock Course", capacity: 50 };
+    return handleServiceFailure("Course service", error, {
+      course_id,
+      name: "Mock Course",
+      capacity: 50,
+    });
   }
 };
 
@@ -32,8 +54,9 @@ const createGradeRecord = async (student_id, course_id) => {
     );
     return response.data;
   } catch (error) {
-    console.warn(`[MOCK] Grade service unreachable. Mocking success for ${student_id} in ${course_id}`);
-    return { message: "Mock grade record created" };
+    return handleServiceFailure("Grade service", error, {
+      message: "Mock grade record created",
+    });
   }
 };
 

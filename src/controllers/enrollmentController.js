@@ -53,6 +53,13 @@ exports.createEnrollment = async (req, res) => {
         });
 
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({
+                message: error.message,
+                error: error.details || null,
+            });
+        }
+
         // Handle external service errors via Axios
         if (error.response) {
             // The request was made and the server responded with a status code

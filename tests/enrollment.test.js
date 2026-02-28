@@ -6,6 +6,8 @@ process.env.MONGO_URI = 'mongodb://localhost/test';
 process.env.STUDENT_SERVICE_URL = 'http://localhost:5001';
 process.env.COURSE_SERVICE_URL = 'http://localhost:5002';
 process.env.GRADE_SERVICE_URL = 'http://localhost:5004';
+process.env.ALLOW_AUTH_BYPASS = 'true';
+process.env.ALLOW_MOCK_SERVICES = 'true';
 
 // ── Mock mongoose so no real DB needed ───────────────────────────
 jest.mock('mongoose', () => {

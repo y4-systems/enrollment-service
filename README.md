@@ -28,6 +28,8 @@ Required runtime variables:
 - `STUDENT_SERVICE_URL` - Base URL of Student Service
 - `COURSE_SERVICE_URL` - Base URL of Course Service
 - `GRADE_SERVICE_URL` - Base URL of Grade Service
+- `ALLOW_AUTH_BYPASS` - Optional local/dev switch (`true` only for controlled testing)
+- `ALLOW_MOCK_SERVICES` - Optional local/dev switch (`true` only for controlled testing)
 - `PORT` - Service port (Cloud Run uses `8080`)
 
 ### Local `.env` example
@@ -37,6 +39,8 @@ MONGO_URI=mongodb+srv://<user>:<password>@<cluster>/enrollmentdb
 STUDENT_SERVICE_URL=https://student-service-<id>.us-central1.run.app
 COURSE_SERVICE_URL=https://course-service-<id>.us-central1.run.app
 GRADE_SERVICE_URL=https://grade-service-<id>.us-central1.run.app
+ALLOW_AUTH_BYPASS=false
+ALLOW_MOCK_SERVICES=false
 ```
 
 ## Run Locally
@@ -80,6 +84,8 @@ Cloud deployment:
 - `MONGO_URI` is not deployed as plain text; it is mapped from Google Secret Manager.
 - CI includes Snyk security scanning before build/deploy.
 - API Gateway and service endpoints support JWT-based protected routes for authorized operations.
+- Enrollment auth is fail-closed by default: failed token validation returns `401` (no implicit production bypass).
+- Inter-service validation is fail-closed by default: unreachable dependencies return `503` (no implicit production mock success).
 - Input validation and duplicate enrollment checks are enforced in business logic.
 
 ## Inter-Service Communication Flow
