@@ -107,8 +107,3 @@ This repository includes:
 - CI/CD workflow (`.github/workflows/main.yml`)
 - OpenAPI/Swagger docs (`/api-docs`)
 - README (this file)
-
-## Notes for Viva Demonstration
-- Show one live inter-service call from Enrollment to Student or Course Service.
-- Show GitHub Actions run where Snyk scan, build, and deploy all pass.
-- Show Cloud Run env where `MONGO_URI` is configured as Secret Manager reference.
