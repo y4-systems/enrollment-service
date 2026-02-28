@@ -130,12 +130,14 @@ jobs:
           image: docker.io/nuwanifonseka/${{ env.IMAGE_NAME }}:latest
           flags: --allow-unauthenticated --port=8080
           env_vars: |
-            MONGO_URI=${{ secrets.MONGO_URI }}
             STUDENT_SERVICE_URL=${{ secrets.STUDENT_SERVICE_URL }}
             COURSE_SERVICE_URL=${{ secrets.COURSE_SERVICE_URL }}
             GRADE_SERVICE_URL=${{ secrets.GRADE_SERVICE_URL }}
+          secrets: |
+            MONGO_URI=MONGO_URI:latest
 
       - name: Summary
         run: |
           echo "Deployment triggered for enrollment-service"
           echo "Image: nuwanifonseka/enrollment-service:latest"
+
