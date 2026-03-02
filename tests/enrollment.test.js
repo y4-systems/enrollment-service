@@ -6,7 +6,6 @@ process.env.MONGO_URI = 'mongodb://localhost/test';
 process.env.STUDENT_SERVICE_URL = 'http://localhost:5001';
 process.env.COURSE_SERVICE_URL = 'http://localhost:5002';
 process.env.GRADE_SERVICE_URL = 'http://localhost:5004';
-process.env.ALLOW_AUTH_BYPASS = 'true';
 process.env.ALLOW_MOCK_SERVICES = 'true';
 
 // ── Mock mongoose so no real DB needed ───────────────────────────
@@ -17,7 +16,7 @@ jest.mock('mongoose', () => {
 
 // ── Mock axios so no real HTTP calls ─────────────────────────────
 jest.mock('axios', () => ({
-    get: jest.fn().mockRejectedValue({ code: 'ECONNREFUSED' }),
+    get: jest.fn().mockResolvedValue({ data: { id: 'test-student-123', role: 'student' } }),
     post: jest.fn().mockRejectedValue({ code: 'ECONNREFUSED' }),
 }));
 
@@ -70,7 +69,7 @@ describe('Authentication Middleware', () => {
         expect(res.status).toBe(401);
     });
 
-    it('allows request with Bearer token (auth service unreachable — dev fallback)', async () => {
+    it('allows request with Bearer token when auth validation succeeds', async () => {
         Enrollment.findOne = jest.fn().mockResolvedValue(null);
         jest.spyOn(Enrollment.prototype, 'save').mockResolvedValue({
             _id: 'new123', student_id: 'S001', course_id: 'C001', status: 'ACTIVE'
@@ -80,7 +79,7 @@ describe('Authentication Middleware', () => {
             .post('/enroll')
             .set('Authorization', 'Bearer fake-jwt-token-for-testing')
             .send({ student_id: 'test-student-123', course_id: 'C001' });
-        // Should pass auth (dev fallback) and reach the controller
+        // Should pass auth validation and reach the controller
         expect(res.status).toBe(201);
     });
 });
@@ -159,13 +158,13 @@ describe('POST /enroll', () => {
 describe('GET /enrollments/student/:studentId', () => {
     const authHeader = { Authorization: 'Bearer fake-jwt-token-for-testing' };
 
-    it('returns 404 when no enrollments found', async () => {
+    it('returns empty array when no enrollments found', async () => {
         Enrollment.find = jest.fn().mockResolvedValue([]);
         const res = await request(app)
             .get('/enrollments/student/test-student-123')
             .set(authHeader);
-        expect(res.status).toBe(404);
-        expect(res.body.message).toMatch(/no enrollments found/i);
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual([]);
     });
 
     it('returns enrollments when found', async () => {

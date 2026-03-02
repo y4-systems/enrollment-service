@@ -108,14 +108,7 @@ exports.getEnrollmentsByStudent = async (req, res) => {
         }
 
         const enrollments = await Enrollment.find({ student_id: studentId });
-
-        if (!enrollments || enrollments.length === 0) {
-            return res.status(404).json({
-                message: "No enrollments found for this student",
-            });
-        }
-
-        res.status(200).json(enrollments);
+        res.status(200).json(Array.isArray(enrollments) ? enrollments : []);
     } catch (error) {
         res.status(500).json({
             message: "Error fetching enrollments",
@@ -171,14 +164,7 @@ exports.getEnrollmentsByCourse = async (req, res) => {
             query = { ...query, student_id: req.user?.id };
         }
         const enrollments = await Enrollment.find(query);
-
-        if (!enrollments || enrollments.length === 0) {
-            return res.status(404).json({
-                message: "No enrollments found for this course",
-            });
-        }
-
-        res.status(200).json(enrollments);
+        res.status(200).json(Array.isArray(enrollments) ? enrollments : []);
     } catch (error) {
         res.status(500).json({
             message: "Error fetching course roster",
@@ -268,14 +254,7 @@ exports.getAllEnrollments = async (req, res) => {
     try {
         const query = isAdmin(req) ? {} : { student_id: req.user?.id };
         const enrollments = await Enrollment.find(query).sort({ enrolled_at: -1 }).limit(100);
-
-        if (!enrollments || enrollments.length === 0) {
-            return res.status(404).json({
-                message: isAdmin(req) ? "No enrollments found in the system" : "No enrollments found for this student",
-            });
-        }
-
-        res.status(200).json(enrollments);
+        res.status(200).json(Array.isArray(enrollments) ? enrollments : []);
     } catch (error) {
         res.status(500).json({
             message: "Error fetching all enrollments",
