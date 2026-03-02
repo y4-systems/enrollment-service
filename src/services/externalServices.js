@@ -4,6 +4,18 @@ const allowMocks = process.env.ALLOW_MOCK_SERVICES === "true";
 const SAFE_SEGMENT_REGEX = /^[A-Za-z0-9_-]{1,120}$/;
 const SERVICE_TIMEOUT_MS = Number(process.env.SERVICE_TIMEOUT_MS || 5000);
 
+const isInvalidServiceUrl = (rawUrl) => {
+  const value = String(rawUrl || "").trim();
+  if (!value) return true;
+  if (/placeholder/i.test(value)) return true;
+  try {
+    const parsed = new URL(value);
+    return !(parsed.protocol === "http:" || parsed.protocol === "https:");
+  } catch {
+    return true;
+  }
+};
+
 const sanitizePathSegment = (value, fieldName) => {
   if (typeof value !== "string" || !SAFE_SEGMENT_REGEX.test(value.trim())) {
     const err = new Error(`${fieldName} has invalid format`);
@@ -28,6 +40,13 @@ const handleServiceFailure = (serviceName, error, mockData) => {
 };
 
 const validateStudent = async (student_id) => {
+  if (isInvalidServiceUrl(process.env.STUDENT_SERVICE_URL)) {
+    return handleServiceFailure(
+      "Student service",
+      new Error("Invalid STUDENT_SERVICE_URL configuration"),
+      { student_id, name: "Mock Student", status: "Valid" }
+    );
+  }
   try {
     const safeStudentId = sanitizePathSegment(student_id, "student_id");
     const response = await axios.get(
@@ -45,6 +64,13 @@ const validateStudent = async (student_id) => {
 };
 
 const validateCourse = async (course_id) => {
+  if (isInvalidServiceUrl(process.env.COURSE_SERVICE_URL)) {
+    return handleServiceFailure(
+      "Course service",
+      new Error("Invalid COURSE_SERVICE_URL configuration"),
+      { course_id, name: "Mock Course", capacity: 50 }
+    );
+  }
   try {
     const safeCourseId = sanitizePathSegment(course_id, "course_id");
     const response = await axios.get(
@@ -62,6 +88,13 @@ const validateCourse = async (course_id) => {
 };
 
 const createGradeRecord = async (student_id, course_id) => {
+  if (isInvalidServiceUrl(process.env.GRADE_SERVICE_URL)) {
+    return handleServiceFailure(
+      "Grade service",
+      new Error("Invalid GRADE_SERVICE_URL configuration"),
+      { message: "Mock grade record created" }
+    );
+  }
   try {
     const response = await axios.post(
       `${process.env.GRADE_SERVICE_URL}/grades`,
