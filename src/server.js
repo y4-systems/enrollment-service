@@ -10,7 +10,7 @@ const rateLimit = require("express-rate-limit");
 const enrollmentRoutes = require("./routes/enrollmentRoutes");
 
 const app = express();
-app.set("trust proxy", 1);
+app.set("trust proxy", true);
 
 // Security Middlewares
 app.use(helmet());
@@ -18,10 +18,10 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 
-// Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
+  validate: { xForwardedForHeader: false },
 });
 app.use(limiter);
 
