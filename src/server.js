@@ -40,7 +40,10 @@ const swaggerOptions = {
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerOptions));
 
 // Routes
+// Support both root and /api prefixed routes so gateway base-path differences
+// do not break enrollment endpoints.
 app.use("/", enrollmentRoutes);
+app.use("/api", enrollmentRoutes);
 
 // Health Check
 app.get("/", (req, res) => {

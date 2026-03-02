@@ -199,6 +199,22 @@ describe('GET /enrollments/student/:studentId', () => {
     });
 });
 
+describe('GET /api/enrollments/student/:studentId (gateway-compat)', () => {
+    const authHeader = { Authorization: 'Bearer fake-jwt-token-for-testing' };
+
+    it('returns enrollments on /api-prefixed route', async () => {
+        Enrollment.find = jest.fn().mockResolvedValue([
+            { _id: '1', student_id: 'test-student-123', course_id: 'C001', status: 'ACTIVE' }
+        ]);
+
+        const res = await request(app)
+            .get('/api/enrollments/student/test-student-123')
+            .set(authHeader);
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+    });
+});
+
 // ── GET /enrollments/course/:courseId ───────────────────────────────
 describe('GET /enrollments/course/:courseId', () => {
     const authHeader = { Authorization: 'Bearer fake-jwt-token-for-testing' };

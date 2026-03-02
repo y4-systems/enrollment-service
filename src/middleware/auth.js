@@ -1,4 +1,5 @@
 const axios = require("axios");
+const AUTH_TIMEOUT_MS = Number(process.env.AUTH_TIMEOUT_MS || 5000);
 
 /**
  * Authentication Middleware
@@ -24,6 +25,7 @@ const authenticate = async (req, res, next) => {
       `${process.env.STUDENT_SERVICE_URL}/auth/validate`,
       {
         headers: { Authorization: `Bearer ${token}` },
+        timeout: AUTH_TIMEOUT_MS,
       }
     );
 

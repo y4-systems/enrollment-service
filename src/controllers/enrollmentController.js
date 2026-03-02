@@ -94,12 +94,26 @@ exports.createEnrollment = async (req, res) => {
 
         await enrollment.save();
 
-        // Trigger Grade Service
-        await createGradeRecord(student_id, course_id);
+        // Trigger Grade Service asynchronously from the response perspective.
+        // Enrollment creation must not fail just because Grade Service is unavailable.
+        let gradeSync = { status: "created" };
+        try {
+            await createGradeRecord(student_id, course_id);
+        } catch (gradeError) {
+            console.warn(
+                `Grade record creation failed for student ${student_id}, course ${course_id}:`,
+                gradeError.message
+            );
+            gradeSync = {
+                status: "deferred",
+                message: "Enrollment created, but grade initialization is pending",
+            };
+        }
 
         res.status(201).json({
             message: "Enrollment created successfully",
             enrollment,
+            grade_sync: gradeSync,
         });
 
     } catch (error) {

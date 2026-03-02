@@ -2,6 +2,7 @@ const axios = require("axios");
 
 const allowMocks = process.env.ALLOW_MOCK_SERVICES === "true";
 const SAFE_SEGMENT_REGEX = /^[A-Za-z0-9_-]{1,120}$/;
+const SERVICE_TIMEOUT_MS = Number(process.env.SERVICE_TIMEOUT_MS || 5000);
 
 const sanitizePathSegment = (value, fieldName) => {
   if (typeof value !== "string" || !SAFE_SEGMENT_REGEX.test(value.trim())) {
@@ -30,7 +31,8 @@ const validateStudent = async (student_id) => {
   try {
     const safeStudentId = sanitizePathSegment(student_id, "student_id");
     const response = await axios.get(
-      `${process.env.STUDENT_SERVICE_URL}/students/${safeStudentId}`
+      `${process.env.STUDENT_SERVICE_URL}/students/${safeStudentId}`,
+      { timeout: SERVICE_TIMEOUT_MS }
     );
     return response.data;
   } catch (error) {
@@ -46,7 +48,8 @@ const validateCourse = async (course_id) => {
   try {
     const safeCourseId = sanitizePathSegment(course_id, "course_id");
     const response = await axios.get(
-      `${process.env.COURSE_SERVICE_URL}/courses/${safeCourseId}`
+      `${process.env.COURSE_SERVICE_URL}/courses/${safeCourseId}`,
+      { timeout: SERVICE_TIMEOUT_MS }
     );
     return response.data;
   } catch (error) {
@@ -62,7 +65,8 @@ const createGradeRecord = async (student_id, course_id) => {
   try {
     const response = await axios.post(
       `${process.env.GRADE_SERVICE_URL}/grades`,
-      { student_id, course_id }
+      { student_id, course_id },
+      { timeout: SERVICE_TIMEOUT_MS }
     );
     return response.data;
   } catch (error) {
