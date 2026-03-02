@@ -9,7 +9,7 @@ const axios = require("axios");
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authHeader?.startsWith("Bearer ")) {
     return res.status(401).json({ message: "No token provided" });
   }
 
@@ -39,6 +39,7 @@ const authenticate = async (req, res, next) => {
     };
     return next();
   } catch (error) {
+    console.error("Token validation failed:", error.message);
     return res.status(401).json({ message: "Token validation failed" });
   }
 };

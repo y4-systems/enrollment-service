@@ -26,7 +26,7 @@ app.use(limiter);
 
 const swaggerUi = require("swagger-ui-express");
 const YAML = require("yamljs");
-const path = require("path");
+const path = require("node:path");
 
 // Load Swagger document
 const swaggerDocument = YAML.load(path.join(__dirname, "swagger.yaml"));
@@ -69,12 +69,16 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  connectDB().then(() => {
+  (async () => {
+    await connectDB();
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
       console.log(`Enrollment Service running on port ${PORT}`);
       console.log("Enrollment Service v4 — PURE ROUTES (NO /api PREFIX)");
     });
+  })().catch((err) => {
+    console.error("Failed to start server:", err.message);
+    process.exit(1);
   });
 }
 

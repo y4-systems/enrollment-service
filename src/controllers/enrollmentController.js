@@ -5,6 +5,26 @@ const {
     validateCourse,
     createGradeRecord,
 } = require("../services/externalServices");
+const { isValidObjectId, sanitizeFilter } = require("mongoose");
+
+const SAFE_ID_REGEX = /^[A-Za-z0-9_-]{1,120}$/;
+
+function sanitizeIdentifier(value, fieldName) {
+    if (typeof value !== "string") {
+        const err = new Error(`${fieldName} must be a string`);
+        err.status = 400;
+        throw err;
+    }
+
+    const trimmed = value.trim();
+    if (!SAFE_ID_REGEX.test(trimmed)) {
+        const err = new Error(`${fieldName} has invalid format`);
+        err.status = 400;
+        throw err;
+    }
+
+    return trimmed;
+}
 
 function isAdmin(req) {
     return (req.user?.role || "").toLowerCase() === "admin";
@@ -15,16 +35,31 @@ function canAccessStudent(req, studentId) {
     return req.user?.id && String(req.user.id) === String(studentId);
 }
 
+function handleKnownError(res, error, fallbackMessage) {
+    if (error?.status) {
+        return res.status(error.status).json({
+            message: error.message || fallbackMessage,
+        });
+    }
+    return res.status(500).json({
+        message: fallbackMessage,
+        error: error.message,
+    });
+}
+
 exports.createEnrollment = async (req, res) => {
     try {
-        const { student_id, course_id } = req.body;
+        const rawStudentId = req.body?.student_id;
+        const rawCourseId = req.body?.course_id;
 
         // Validate input
-        if (!student_id || !course_id) {
+        if (!rawStudentId || !rawCourseId) {
             return res.status(400).json({
                 message: "student_id and course_id are required",
             });
         }
+        const student_id = sanitizeIdentifier(rawStudentId, "student_id");
+        const course_id = sanitizeIdentifier(rawCourseId, "course_id");
 
         if (!canAccessStudent(req, student_id)) {
             return res.status(403).json({
@@ -39,11 +74,11 @@ exports.createEnrollment = async (req, res) => {
         await validateCourse(course_id);
 
         // Prevent duplicate enrollment
-        const existing = await Enrollment.findOne({
+        const existing = await Enrollment.findOne(sanitizeFilter({
             student_id,
             course_id,
             status: "ACTIVE",
-        });
+        }));
 
         if (existing) {
             return res.status(409).json({
@@ -91,35 +126,34 @@ exports.createEnrollment = async (req, res) => {
             });
         }
 
-        res.status(500).json({
-            message: "Internal server error",
-            error: error.message,
-        });
+        return handleKnownError(res, error, "Internal server error");
     }
 };
 
 exports.getEnrollmentsByStudent = async (req, res) => {
     try {
-        const { studentId } = req.params;
+        const studentId = sanitizeIdentifier(req.params?.studentId, "studentId");
         if (!canAccessStudent(req, studentId)) {
             return res.status(403).json({
                 message: "Access denied for requested student enrollments",
             });
         }
 
-        const enrollments = await Enrollment.find({ student_id: studentId });
+        const enrollments = await Enrollment.find(sanitizeFilter({ student_id: studentId }));
         res.status(200).json(Array.isArray(enrollments) ? enrollments : []);
     } catch (error) {
-        res.status(500).json({
-            message: "Error fetching enrollments",
-            error: error.message,
-        });
+        return handleKnownError(res, error, "Error fetching enrollments");
     }
 };
 
 exports.cancelEnrollment = async (req, res) => {
     try {
         const { id } = req.params;
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({
+                message: "Invalid enrollment id format",
+            });
+        }
 
         const enrollment = await Enrollment.findById(id);
 
@@ -149,44 +183,41 @@ exports.cancelEnrollment = async (req, res) => {
             enrollment,
         });
     } catch (error) {
-        res.status(500).json({
-            message: "Error cancelling enrollment",
-            error: error.message,
-        });
+        return handleKnownError(res, error, "Error cancelling enrollment");
     }
 };
 
 exports.getEnrollmentsByCourse = async (req, res) => {
     try {
-        const { courseId } = req.params;
-        let query = { course_id: courseId };
+        const courseId = sanitizeIdentifier(req.params?.courseId, "courseId");
+        let query = sanitizeFilter({ course_id: courseId });
         if (!isAdmin(req)) {
-            query = { ...query, student_id: req.user?.id };
+            const userId = sanitizeIdentifier(req.user?.id, "userId");
+            query = sanitizeFilter({ ...query, student_id: userId });
         }
         const enrollments = await Enrollment.find(query);
         res.status(200).json(Array.isArray(enrollments) ? enrollments : []);
     } catch (error) {
-        res.status(500).json({
-            message: "Error fetching course roster",
-            error: error.message,
-        });
+        return handleKnownError(res, error, "Error fetching course roster");
     }
 };
 
 exports.checkEnrollment = async (req, res) => {
     try {
-        const { studentId, courseId } = req.query;
+        const { studentId: rawStudentId, courseId: rawCourseId } = req.query;
 
-        if (!studentId || !courseId) {
+        if (!rawStudentId || !rawCourseId) {
             return res.status(400).json({
                 message: "studentId and courseId are required as query parameters",
             });
         }
+        const studentId = sanitizeIdentifier(rawStudentId, "studentId");
+        const courseId = sanitizeIdentifier(rawCourseId, "courseId");
 
-        const enrollment = await Enrollment.findOne({
+        const enrollment = await Enrollment.findOne(sanitizeFilter({
             student_id: studentId,
             course_id: courseId
-        });
+        }));
 
         if (!enrollment) {
             return res.status(200).json({
@@ -202,10 +233,7 @@ exports.checkEnrollment = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
-            message: "Error checking enrollment validation",
-            error: error.message,
-        });
+        return handleKnownError(res, error, "Error checking enrollment validation");
     }
 };
 
@@ -213,6 +241,11 @@ exports.updateEnrollmentStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({
+                message: "Invalid enrollment id format",
+            });
+        }
 
         const validStatuses = ["ACTIVE", "CANCELLED", "WITHDRAWN", "COMPLETED"];
         if (!validStatuses.includes(status)) {
@@ -243,22 +276,18 @@ exports.updateEnrollmentStatus = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
-            message: "Error updating enrollment status",
-            error: error.message,
-        });
+        return handleKnownError(res, error, "Error updating enrollment status");
     }
 };
 
 exports.getAllEnrollments = async (req, res) => {
     try {
-        const query = isAdmin(req) ? {} : { student_id: req.user?.id };
+        const query = isAdmin(req)
+            ? {}
+            : sanitizeFilter({ student_id: sanitizeIdentifier(req.user?.id, "userId") });
         const enrollments = await Enrollment.find(query).sort({ enrolled_at: -1 }).limit(100);
         res.status(200).json(Array.isArray(enrollments) ? enrollments : []);
     } catch (error) {
-        res.status(500).json({
-            message: "Error fetching all enrollments",
-            error: error.message,
-        });
+        return handleKnownError(res, error, "Error fetching all enrollments");
     }
 };

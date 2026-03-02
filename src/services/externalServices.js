@@ -1,6 +1,16 @@
 const axios = require("axios");
 
 const allowMocks = process.env.ALLOW_MOCK_SERVICES === "true";
+const SAFE_SEGMENT_REGEX = /^[A-Za-z0-9_-]{1,120}$/;
+
+const sanitizePathSegment = (value, fieldName) => {
+  if (typeof value !== "string" || !SAFE_SEGMENT_REGEX.test(value.trim())) {
+    const err = new Error(`${fieldName} has invalid format`);
+    err.status = 400;
+    throw err;
+  }
+  return encodeURIComponent(value.trim());
+};
 
 const handleServiceFailure = (serviceName, error, mockData) => {
   if (allowMocks) {
@@ -18,8 +28,9 @@ const handleServiceFailure = (serviceName, error, mockData) => {
 
 const validateStudent = async (student_id) => {
   try {
+    const safeStudentId = sanitizePathSegment(student_id, "student_id");
     const response = await axios.get(
-      `${process.env.STUDENT_SERVICE_URL}/students/${student_id}`
+      `${process.env.STUDENT_SERVICE_URL}/students/${safeStudentId}`
     );
     return response.data;
   } catch (error) {
@@ -33,8 +44,9 @@ const validateStudent = async (student_id) => {
 
 const validateCourse = async (course_id) => {
   try {
+    const safeCourseId = sanitizePathSegment(course_id, "course_id");
     const response = await axios.get(
-      `${process.env.COURSE_SERVICE_URL}/courses/${course_id}`
+      `${process.env.COURSE_SERVICE_URL}/courses/${safeCourseId}`
     );
     return response.data;
   } catch (error) {
