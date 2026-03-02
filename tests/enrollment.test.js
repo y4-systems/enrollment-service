@@ -64,11 +64,10 @@ describe('Authentication Middleware', () => {
         expect(res.body.message).toMatch(/no token/i);
     });
 
-    it('allows GET /enrollments without token (public)', async () => {
+    it('returns 401 when no token provided on GET /enrollments/student/:studentId', async () => {
         Enrollment.find = jest.fn().mockResolvedValue([]);
         const res = await request(app).get('/enrollments/student/S001');
-        // Should not be 401 — even though no enrollments, it should be 404 (not unauthorized)
-        expect(res.status).not.toBe(401);
+        expect(res.status).toBe(401);
     });
 
     it('allows request with Bearer token (auth service unreachable — dev fallback)', async () => {
@@ -80,7 +79,7 @@ describe('Authentication Middleware', () => {
         const res = await request(app)
             .post('/enroll')
             .set('Authorization', 'Bearer fake-jwt-token-for-testing')
-            .send({ student_id: 'S001', course_id: 'C001' });
+            .send({ student_id: 'test-student-123', course_id: 'C001' });
         // Should pass auth (dev fallback) and reach the controller
         expect(res.status).toBe(201);
     });
@@ -103,7 +102,7 @@ describe('POST /enroll', () => {
         const res = await request(app)
             .post('/enroll')
             .set(authHeader)
-            .send({ student_id: 'S001' });
+            .send({ student_id: 'test-student-123' });
         expect(res.status).toBe(400);
         expect(res.body.message).toMatch(/student_id and course_id are required/);
     });
@@ -119,7 +118,7 @@ describe('POST /enroll', () => {
     it('returns 409 when duplicate active enrollment exists', async () => {
         Enrollment.findOne = jest.fn().mockResolvedValue({
             _id: 'existing123',
-            student_id: 'S001',
+            student_id: 'test-student-123',
             course_id: 'C001',
             status: 'ACTIVE'
         });
@@ -127,7 +126,7 @@ describe('POST /enroll', () => {
         const res = await request(app)
             .post('/enroll')
             .set(authHeader)
-            .send({ student_id: 'S001', course_id: 'C001' });
+            .send({ student_id: 'test-student-123', course_id: 'C001' });
         expect(res.status).toBe(409);
         expect(res.body.message).toMatch(/already enrolled/i);
     });
@@ -141,17 +140,30 @@ describe('POST /enroll', () => {
         const res = await request(app)
             .post('/enroll')
             .set(authHeader)
-            .send({ student_id: 'S001', course_id: 'C001' });
+            .send({ student_id: 'test-student-123', course_id: 'C001' });
         expect(res.status).toBe(201);
         expect(res.body.message).toBe('Enrollment created successfully');
+    });
+
+    it('returns 403 when student tries to enroll another student', async () => {
+        const res = await request(app)
+            .post('/enroll')
+            .set(authHeader)
+            .send({ student_id: 'S001', course_id: 'C001' });
+        expect(res.status).toBe(403);
+        expect(res.body.message).toMatch(/only create enrollments for their own account/i);
     });
 });
 
 // ── GET /enrollments/student/:studentId ───────────────────────────────
 describe('GET /enrollments/student/:studentId', () => {
+    const authHeader = { Authorization: 'Bearer fake-jwt-token-for-testing' };
+
     it('returns 404 when no enrollments found', async () => {
         Enrollment.find = jest.fn().mockResolvedValue([]);
-        const res = await request(app).get('/enrollments/student/S999');
+        const res = await request(app)
+            .get('/enrollments/student/test-student-123')
+            .set(authHeader);
         expect(res.status).toBe(404);
         expect(res.body.message).toMatch(/no enrollments found/i);
     });
@@ -163,7 +175,9 @@ describe('GET /enrollments/student/:studentId', () => {
         ];
         Enrollment.find = jest.fn().mockResolvedValue(mockEnrollments);
 
-        const res = await request(app).get('/enrollments/student/S001');
+        const res = await request(app)
+            .get('/enrollments/student/test-student-123')
+            .set(authHeader);
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
         expect(res.body.length).toBe(2);
@@ -171,17 +185,30 @@ describe('GET /enrollments/student/:studentId', () => {
 
     it('returns 500 on database error', async () => {
         Enrollment.find = jest.fn().mockRejectedValue(new Error('DB error'));
-        const res = await request(app).get('/enrollments/student/S001');
+        const res = await request(app)
+            .get('/enrollments/student/test-student-123')
+            .set(authHeader);
         expect(res.status).toBe(500);
         expect(res.body.message).toMatch(/error fetching/i);
+    });
+
+    it('returns 403 when requesting another student enrollments', async () => {
+        const res = await request(app)
+            .get('/enrollments/student/S001')
+            .set(authHeader);
+        expect(res.status).toBe(403);
     });
 });
 
 // ── GET /enrollments/course/:courseId ───────────────────────────────
 describe('GET /enrollments/course/:courseId', () => {
+    const authHeader = { Authorization: 'Bearer fake-jwt-token-for-testing' };
+
     it('returns roster when found', async () => {
         Enrollment.find = jest.fn().mockResolvedValue([{ student_id: 'S001' }]);
-        const res = await request(app).get('/enrollments/course/C202');
+        const res = await request(app)
+            .get('/enrollments/course/C202')
+            .set(authHeader);
         expect(res.status).toBe(200);
         expect(res.body[0].student_id).toBe('S001');
     });
@@ -209,7 +236,13 @@ describe('PATCH /enrollments/:id/status', () => {
     const authHeader = { Authorization: 'Bearer fake-jwt-token-for-testing' };
 
     it('updates status successfully', async () => {
-        Enrollment.findByIdAndUpdate = jest.fn().mockResolvedValue({ status: 'COMPLETED' });
+        const record = {
+            _id: '507f1f77bcf86cd799439011',
+            student_id: 'test-student-123',
+            status: 'ACTIVE',
+            save: jest.fn().mockResolvedValue(true),
+        };
+        Enrollment.findById = jest.fn().mockResolvedValue(record);
         const res = await request(app)
             .patch('/enrollments/507f1f77bcf86cd799439011/status')
             .set(authHeader)
@@ -243,6 +276,7 @@ describe('DELETE /enroll/:id', () => {
     it('returns 400 when enrollment is already cancelled', async () => {
         Enrollment.findById = jest.fn().mockResolvedValue({
             _id: '507f1f77bcf86cd799439011',
+            student_id: 'test-student-123',
             status: 'CANCELLED',
             save: jest.fn()
         });
@@ -256,7 +290,7 @@ describe('DELETE /enroll/:id', () => {
     it('cancels enrollment successfully', async () => {
         const mockEnrollment = {
             _id: '507f1f77bcf86cd799439011',
-            student_id: 'S001',
+            student_id: 'test-student-123',
             course_id: 'C001',
             status: 'ACTIVE',
             save: jest.fn().mockResolvedValue(true)
@@ -269,6 +303,19 @@ describe('DELETE /enroll/:id', () => {
         expect(res.status).toBe(200);
         expect(res.body.message).toMatch(/cancelled successfully/i);
         expect(mockEnrollment.status).toBe('CANCELLED');
+    });
+
+    it('returns 403 when cancelling another student enrollment', async () => {
+        Enrollment.findById = jest.fn().mockResolvedValue({
+            _id: '507f1f77bcf86cd799439011',
+            student_id: 'S001',
+            status: 'ACTIVE',
+            save: jest.fn().mockResolvedValue(true),
+        });
+        const res = await request(app)
+            .delete('/enroll/507f1f77bcf86cd799439011')
+            .set(authHeader);
+        expect(res.status).toBe(403);
     });
 
     it('returns 500 on database error during cancel', async () => {

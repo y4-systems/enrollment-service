@@ -21,7 +21,7 @@ router.patch("/enrollments/:id/status", authenticate, updateEnrollmentStatus);
 router.get("/enrollments/check", checkEnrollment);
 
 // Read-only roster/student history
-router.get("/enrollments/student/:studentId", getEnrollmentsByStudent);
-router.get("/enrollments/course/:courseId", getEnrollmentsByCourse);
+router.get("/enrollments/student/:studentId", authenticate, getEnrollmentsByStudent);
+router.get("/enrollments/course/:courseId", authenticate, getEnrollmentsByCourse);
 
 module.exports = router;

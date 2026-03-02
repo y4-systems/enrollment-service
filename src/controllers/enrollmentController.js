@@ -6,6 +6,15 @@ const {
     createGradeRecord,
 } = require("../services/externalServices");
 
+function isAdmin(req) {
+    return (req.user?.role || "").toLowerCase() === "admin";
+}
+
+function canAccessStudent(req, studentId) {
+    if (isAdmin(req)) return true;
+    return req.user?.id && String(req.user.id) === String(studentId);
+}
+
 exports.createEnrollment = async (req, res) => {
     try {
         const { student_id, course_id } = req.body;
@@ -14,6 +23,12 @@ exports.createEnrollment = async (req, res) => {
         if (!student_id || !course_id) {
             return res.status(400).json({
                 message: "student_id and course_id are required",
+            });
+        }
+
+        if (!canAccessStudent(req, student_id)) {
+            return res.status(403).json({
+                message: "Students can only create enrollments for their own account",
             });
         }
 
@@ -86,6 +101,11 @@ exports.createEnrollment = async (req, res) => {
 exports.getEnrollmentsByStudent = async (req, res) => {
     try {
         const { studentId } = req.params;
+        if (!canAccessStudent(req, studentId)) {
+            return res.status(403).json({
+                message: "Access denied for requested student enrollments",
+            });
+        }
 
         const enrollments = await Enrollment.find({ student_id: studentId });
 
@@ -116,6 +136,12 @@ exports.cancelEnrollment = async (req, res) => {
             });
         }
 
+        if (!canAccessStudent(req, enrollment.student_id)) {
+            return res.status(403).json({
+                message: "Access denied for this enrollment",
+            });
+        }
+
         if (enrollment.status === "CANCELLED") {
             return res.status(400).json({
                 message: "Enrollment is already cancelled",
@@ -140,8 +166,11 @@ exports.cancelEnrollment = async (req, res) => {
 exports.getEnrollmentsByCourse = async (req, res) => {
     try {
         const { courseId } = req.params;
-
-        const enrollments = await Enrollment.find({ course_id: courseId });
+        let query = { course_id: courseId };
+        if (!isAdmin(req)) {
+            query = { ...query, student_id: req.user?.id };
+        }
+        const enrollments = await Enrollment.find(query);
 
         if (!enrollments || enrollments.length === 0) {
             return res.status(404).json({
@@ -206,17 +235,21 @@ exports.updateEnrollmentStatus = async (req, res) => {
             });
         }
 
-        const enrollment = await Enrollment.findByIdAndUpdate(
-            id,
-            { status },
-            { new: true, runValidators: true }
-        );
-
+        const enrollment = await Enrollment.findById(id);
         if (!enrollment) {
             return res.status(404).json({
                 message: "Enrollment not found",
             });
         }
+
+        if (!canAccessStudent(req, enrollment.student_id)) {
+            return res.status(403).json({
+                message: "Access denied for this enrollment",
+            });
+        }
+
+        enrollment.status = status;
+        await enrollment.save();
 
         res.status(200).json({
             message: `Enrollment status updated to ${status} successfully`,
@@ -233,12 +266,12 @@ exports.updateEnrollmentStatus = async (req, res) => {
 
 exports.getAllEnrollments = async (req, res) => {
     try {
-        // Fetch all enrollments, sorted by newest first
-        const enrollments = await Enrollment.find().sort({ enrolled_at: -1 }).limit(100);
+        const query = isAdmin(req) ? {} : { student_id: req.user?.id };
+        const enrollments = await Enrollment.find(query).sort({ enrolled_at: -1 }).limit(100);
 
         if (!enrollments || enrollments.length === 0) {
             return res.status(404).json({
-                message: "No enrollments found in the system",
+                message: isAdmin(req) ? "No enrollments found in the system" : "No enrollments found for this student",
             });
         }
 

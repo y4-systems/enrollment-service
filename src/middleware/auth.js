@@ -5,6 +5,14 @@ const axios = require("axios");
  * Validates JWT tokens by calling the Student/Auth service.
  * Secure by default (fail-closed). Optional bypass only for explicit local/dev usage.
  */
+const resolveUserRole = (req, fallback = "student") => {
+  const headerRole = req.headers["x-user-role"];
+  if (typeof headerRole === "string" && headerRole.trim()) {
+    return headerRole.trim().toLowerCase();
+  }
+  return fallback;
+};
+
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const allowBypass = process.env.ALLOW_AUTH_BYPASS === "true";
@@ -33,7 +41,12 @@ const authenticate = async (req, res, next) => {
       }
     );
 
-    req.user = response.data;
+    const validated = response.data || {};
+    req.user = {
+      ...validated,
+      id: validated.id || req.headers["x-user-id"] || null,
+      role: resolveUserRole(req, validated.role || "student"),
+    };
     return next();
   } catch (error) {
     if (allowBypass) {
