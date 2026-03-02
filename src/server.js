@@ -10,6 +10,7 @@ const rateLimit = require("express-rate-limit");
 const enrollmentRoutes = require("./routes/enrollmentRoutes");
 
 const app = express();
+app.set("trust proxy", 1);
 
 // Security Middlewares
 app.use(helmet());
