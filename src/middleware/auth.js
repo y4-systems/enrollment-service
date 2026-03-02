@@ -3,19 +3,14 @@ const axios = require("axios");
 /**
  * Authentication Middleware
  * Validates JWT tokens by calling the Student/Auth service.
- * Secure by default (fail-closed). Optional bypass only for explicit local/dev usage.
+ * Secure by default (fail-closed). Bypass is only allowed in test/dev.
  */
-const resolveUserRole = (req, fallback = "student") => {
-  const headerRole = req.headers["x-user-role"];
-  if (typeof headerRole === "string" && headerRole.trim()) {
-    return headerRole.trim().toLowerCase();
-  }
-  return fallback;
-};
 
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   const allowBypass = process.env.ALLOW_AUTH_BYPASS === "true";
+  const isNonProd = ["test", "development"].includes(process.env.NODE_ENV);
+  const bypassEnabled = allowBypass && isNonProd;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "No token provided" });
@@ -24,7 +19,7 @@ const authenticate = async (req, res, next) => {
   const token = authHeader.split(" ")[1];
 
   if (!process.env.STUDENT_SERVICE_URL) {
-    if (!allowBypass) {
+    if (!bypassEnabled) {
       return res.status(503).json({ message: "Auth service is not configured" });
     }
 
@@ -42,14 +37,18 @@ const authenticate = async (req, res, next) => {
     );
 
     const validated = response.data || {};
+    if (!validated.id) {
+      return res.status(401).json({ message: "Token validation response missing user id" });
+    }
+
     req.user = {
       ...validated,
-      id: validated.id || req.headers["x-user-id"] || null,
-      role: resolveUserRole(req, validated.role || "student"),
+      id: validated.id,
+      role: (validated.role || "student").toLowerCase(),
     };
     return next();
   } catch (error) {
-    if (allowBypass) {
+    if (bypassEnabled) {
       console.warn(
         `[AUTH] Validation failed (${error.message}), bypassing due to ALLOW_AUTH_BYPASS=true`
       );
