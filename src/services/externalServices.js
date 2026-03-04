@@ -3,6 +3,12 @@ const axios = require("axios");
 const allowMocks = process.env.ALLOW_MOCK_SERVICES === "true";
 const SAFE_SEGMENT_REGEX = /^[A-Za-z0-9_-]{1,120}$/;
 const SERVICE_TIMEOUT_MS = Number(process.env.SERVICE_TIMEOUT_MS || 5000);
+const buildForwardHeaders = (authorization) => {
+  if (typeof authorization === "string" && authorization.trim()) {
+    return { Authorization: authorization.trim() };
+  }
+  return {};
+};
 
 const isInvalidServiceUrl = (rawUrl) => {
   const value = String(rawUrl || "").trim();
@@ -39,7 +45,7 @@ const handleServiceFailure = (serviceName, error, mockData) => {
   throw err;
 };
 
-const validateStudent = async (student_id) => {
+const validateStudent = async (student_id, authorization) => {
   if (isInvalidServiceUrl(process.env.STUDENT_SERVICE_URL)) {
     return handleServiceFailure(
       "Student service",
@@ -51,7 +57,10 @@ const validateStudent = async (student_id) => {
     const safeStudentId = sanitizePathSegment(student_id, "student_id");
     const response = await axios.get(
       `${process.env.STUDENT_SERVICE_URL}/students/${safeStudentId}`,
-      { timeout: SERVICE_TIMEOUT_MS }
+      {
+        timeout: SERVICE_TIMEOUT_MS,
+        headers: buildForwardHeaders(authorization),
+      }
     );
     return response.data;
   } catch (error) {
@@ -63,7 +72,7 @@ const validateStudent = async (student_id) => {
   }
 };
 
-const validateCourse = async (course_id) => {
+const validateCourse = async (course_id, authorization) => {
   if (isInvalidServiceUrl(process.env.COURSE_SERVICE_URL)) {
     return handleServiceFailure(
       "Course service",
@@ -75,7 +84,10 @@ const validateCourse = async (course_id) => {
     const safeCourseId = sanitizePathSegment(course_id, "course_id");
     const response = await axios.get(
       `${process.env.COURSE_SERVICE_URL}/courses/${safeCourseId}`,
-      { timeout: SERVICE_TIMEOUT_MS }
+      {
+        timeout: SERVICE_TIMEOUT_MS,
+        headers: buildForwardHeaders(authorization),
+      }
     );
     return response.data;
   } catch (error) {

@@ -60,6 +60,7 @@ exports.createEnrollment = async (req, res) => {
         }
         const student_id = sanitizeIdentifier(rawStudentId, "student_id");
         const course_id = sanitizeIdentifier(rawCourseId, "course_id");
+        const authHeader = req.headers?.authorization;
 
         if (!canAccessStudent(req, student_id)) {
             return res.status(403).json({
@@ -68,10 +69,10 @@ exports.createEnrollment = async (req, res) => {
         }
 
         // Validate student via Student Service
-        await validateStudent(student_id);
+        await validateStudent(student_id, authHeader);
 
         // Validate course via Course Service
-        await validateCourse(course_id);
+        await validateCourse(course_id, authHeader);
 
         // Prevent duplicate enrollment
         const existing = await Enrollment.findOne(sanitizeFilter({

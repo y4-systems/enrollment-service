@@ -129,10 +129,6 @@ jobs:
           region: us-central1
           image: docker.io/nuwanifonseka/${{ env.IMAGE_NAME }}:latest
           flags: --port=8080
-          env_vars: |
-            STUDENT_SERVICE_URL=${{ secrets.STUDENT_SERVICE_URL }}
-            COURSE_SERVICE_URL=${{ secrets.COURSE_SERVICE_URL }}
-            GRADE_SERVICE_URL=${{ secrets.GRADE_SERVICE_URL }}
           secrets: |
             MONGO_URI=MONGO_URI:latest
 
