@@ -69,6 +69,38 @@ const validateStudent = async (student_id, authorization) => {
     );
     return response.data;
   } catch (error) {
+    // Some gateway/user-service combinations protect student-profile reads differently.
+    // Fallback to token validation to preserve secure enrollment flow for the same user.
+    if (
+      authorization &&
+      (error?.response?.status === 401 || error?.response?.status === 403)
+    ) {
+      try {
+        const tokenValidation = await axios.get(
+          joinPath(process.env.STUDENT_SERVICE_URL, "/api/auth/validate"),
+          {
+            timeout: SERVICE_TIMEOUT_MS,
+            headers: buildForwardHeaders(authorization),
+          }
+        );
+        const validated = tokenValidation.data || {};
+        if (String(validated.id || "") !== String(student_id)) {
+          const forbidden = new Error(
+            "Student token does not match requested student_id"
+          );
+          forbidden.status = 403;
+          throw forbidden;
+        }
+        return validated;
+      } catch (fallbackError) {
+        return handleServiceFailure("Student service", fallbackError, {
+          student_id,
+          name: "Mock Student",
+          status: "Valid",
+        });
+      }
+    }
+
     return handleServiceFailure("Student service", error, {
       student_id,
       name: "Mock Student",
