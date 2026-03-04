@@ -3,6 +3,11 @@ const axios = require("axios");
 const allowMocks = process.env.ALLOW_MOCK_SERVICES === "true";
 const SAFE_SEGMENT_REGEX = /^[A-Za-z0-9_-]{1,120}$/;
 const SERVICE_TIMEOUT_MS = Number(process.env.SERVICE_TIMEOUT_MS || 5000);
+const joinPath = (baseUrl, path) =>
+  `${String(baseUrl || "").replace(/\/+$/, "")}/${String(path || "").replace(
+    /^\/+/,
+    ""
+  )}`;
 const buildForwardHeaders = (authorization) => {
   if (typeof authorization === "string" && authorization.trim()) {
     return { Authorization: authorization.trim() };
@@ -56,7 +61,7 @@ const validateStudent = async (student_id, authorization) => {
   try {
     const safeStudentId = sanitizePathSegment(student_id, "student_id");
     const response = await axios.get(
-      `${process.env.STUDENT_SERVICE_URL}/students/${safeStudentId}`,
+      joinPath(process.env.STUDENT_SERVICE_URL, `/api/students/${safeStudentId}`),
       {
         timeout: SERVICE_TIMEOUT_MS,
         headers: buildForwardHeaders(authorization),
@@ -83,7 +88,7 @@ const validateCourse = async (course_id, authorization) => {
   try {
     const safeCourseId = sanitizePathSegment(course_id, "course_id");
     const response = await axios.get(
-      `${process.env.COURSE_SERVICE_URL}/courses/${safeCourseId}`,
+      joinPath(process.env.COURSE_SERVICE_URL, `/api/courses/${safeCourseId}`),
       {
         timeout: SERVICE_TIMEOUT_MS,
         headers: buildForwardHeaders(authorization),
@@ -109,7 +114,7 @@ const createGradeRecord = async (student_id, course_id) => {
   }
   try {
     const response = await axios.post(
-      `${process.env.GRADE_SERVICE_URL}/grades`,
+      joinPath(process.env.GRADE_SERVICE_URL, "/api/grades"),
       { student_id, course_id },
       { timeout: SERVICE_TIMEOUT_MS }
     );

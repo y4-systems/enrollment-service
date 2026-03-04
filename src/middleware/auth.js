@@ -1,5 +1,10 @@
 const axios = require("axios");
 const AUTH_TIMEOUT_MS = Number(process.env.AUTH_TIMEOUT_MS || 5000);
+const joinPath = (baseUrl, path) =>
+  `${String(baseUrl || "").replace(/\/+$/, "")}/${String(path || "").replace(
+    /^\/+/,
+    ""
+  )}`;
 
 /**
  * Authentication Middleware
@@ -22,7 +27,7 @@ const authenticate = async (req, res, next) => {
 
   try {
     const response = await axios.get(
-      `${process.env.STUDENT_SERVICE_URL}/auth/validate`,
+      joinPath(process.env.STUDENT_SERVICE_URL, "/api/auth/validate"),
       {
         headers: { Authorization: `Bearer ${token}` },
         timeout: AUTH_TIMEOUT_MS,
