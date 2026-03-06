@@ -1,22 +1,9 @@
 const axios = require("axios");
+const { joinPath } = require("../utils/url");
 
 const allowMocks = process.env.ALLOW_MOCK_SERVICES === "true";
 const SAFE_SEGMENT_REGEX = /^[A-Za-z0-9_-]{1,120}$/;
 const SERVICE_TIMEOUT_MS = Number(process.env.SERVICE_TIMEOUT_MS || 5000);
-const trimTrailingSlashes = (value) => {
-  let out = String(value || "");
-  while (out.endsWith("/")) out = out.slice(0, -1);
-  return out;
-};
-
-const trimLeadingSlashes = (value) => {
-  let out = String(value || "");
-  while (out.startsWith("/")) out = out.slice(1);
-  return out;
-};
-
-const joinPath = (baseUrl, path) =>
-  `${trimTrailingSlashes(baseUrl)}/${trimLeadingSlashes(path)}`;
 const buildForwardHeaders = (authorization) => {
   if (typeof authorization === "string" && authorization.trim()) {
     return { Authorization: authorization.trim() };

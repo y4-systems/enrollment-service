@@ -366,7 +366,7 @@ describe('CORS Headers', () => {
     it('allows cross-origin requests', async () => {
         const res = await request(app)
             .get('/')
-            .set('Origin', 'http://example.com');
+            .set('Origin', 'https://example.com');
         expect(res.headers['access-control-allow-origin']).toBeDefined();
     });
 });

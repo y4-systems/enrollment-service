@@ -1,19 +1,6 @@
 const axios = require("axios");
+const { joinPath } = require("../utils/url");
 const AUTH_TIMEOUT_MS = Number(process.env.AUTH_TIMEOUT_MS || 5000);
-const trimTrailingSlashes = (value) => {
-  let out = String(value || "");
-  while (out.endsWith("/")) out = out.slice(0, -1);
-  return out;
-};
-
-const trimLeadingSlashes = (value) => {
-  let out = String(value || "");
-  while (out.startsWith("/")) out = out.slice(1);
-  return out;
-};
-
-const joinPath = (baseUrl, path) =>
-  `${trimTrailingSlashes(baseUrl)}/${trimLeadingSlashes(path)}`;
 
 /**
  * Authentication Middleware
