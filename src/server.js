@@ -10,11 +10,32 @@ const rateLimit = require("express-rate-limit");
 const enrollmentRoutes = require("./routes/enrollmentRoutes");
 
 const app = express();
-app.set("trust proxy", true);
+app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
 
 // Security Middlewares
 app.use(helmet());
-app.use(cors());
+const allowedOrigins = new Set(
+  String(
+    process.env.CORS_ORIGINS ||
+      "http://localhost:3000,http://localhost:8080,http://example.com"
+  )
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+);
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS origin not allowed"));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "X-User-ID"],
+    credentials: false,
+  })
+);
 app.use(express.json());
 app.use(morgan("dev"));
 
